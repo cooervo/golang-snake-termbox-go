@@ -1,28 +1,28 @@
 package main
 
 import (
-	"github.com/nsf/termbox-go"
+	tb "github.com/nsf/termbox-go"
 	"time"
 )
 
 var curCol = 0
 var curRune = 0
-var backbuf []termbox.Cell
+var backbuf []tb.Cell
 var bbw, bbh int
 
 var runes = []rune{' ', '░', '▒', '▓', '█'}
-var colors = []termbox.Attribute{
-	termbox.ColorBlack,
-	termbox.ColorRed,
-	termbox.ColorGreen,
-	termbox.ColorYellow,
-	termbox.ColorBlue,
-	termbox.ColorMagenta,
-	termbox.ColorCyan,
-	termbox.ColorWhite,
+var colors = []tb.Attribute{
+	tb.ColorBlack,
+	tb.ColorRed,
+	tb.ColorGreen,
+	tb.ColorYellow,
+	tb.ColorBlue,
+	tb.ColorMagenta,
+	tb.ColorCyan,
+	tb.ColorWhite,
 }
 
-type attrFunc func(int) (rune, termbox.Attribute, termbox.Attribute)
+type attrFunc func(int) (rune, tb.Attribute, tb.Attribute)
 
 func updateAndDrawButtons(current *int, x, y int, mx, my int, n int, attrf attrFunc) {
 	/*
@@ -32,25 +32,25 @@ func updateAndDrawButtons(current *int, x, y int, mx, my int, n int, attrf attrF
 			*current = i
 		}
 		r, fg, bg := attrf(i)
-		termbox.SetCell(lx+0, ly+0, r, fg, bg)
-		termbox.SetCell(lx+1, ly+0, r, fg, bg)
-		termbox.SetCell(lx+2, ly+0, r, fg, bg)
-		termbox.SetCell(lx+3, ly+0, r, fg, bg)
-		termbox.SetCell(lx+0, ly+1, r, fg, bg)
-		termbox.SetCell(lx+1, ly+1, r, fg, bg)
-		termbox.SetCell(lx+2, ly+1, r, fg, bg)
-		termbox.SetCell(lx+3, ly+1, r, fg, bg)
+		tb.SetCell(lx+0, ly+0, r, fg, bg)
+		tb.SetCell(lx+1, ly+0, r, fg, bg)
+		tb.SetCell(lx+2, ly+0, r, fg, bg)
+		tb.SetCell(lx+3, ly+0, r, fg, bg)
+		tb.SetCell(lx+0, ly+1, r, fg, bg)
+		tb.SetCell(lx+1, ly+1, r, fg, bg)
+		tb.SetCell(lx+2, ly+1, r, fg, bg)
+		tb.SetCell(lx+3, ly+1, r, fg, bg)
 		lx += 4
 	}
 	lx, ly = x, y
 	for i := 0; i < n; i++ {
 		if *current == i {
-			fg := termbox.ColorRed | termbox.AttrBold
-			bg := termbox.ColorDefault
-			termbox.SetCell(lx+0, ly+2, '^', fg, bg)
-			termbox.SetCell(lx+1, ly+2, '^', fg, bg)
-			termbox.SetCell(lx+2, ly+2, '^', fg, bg)
-			termbox.SetCell(lx+3, ly+2, '^', fg, bg)
+			fg := tb.ColorRed | tb.AttrBold
+			bg := tb.ColorDefault
+			tb.SetCell(lx+0, ly+2, '^', fg, bg)
+			tb.SetCell(lx+1, ly+2, '^', fg, bg)
+			tb.SetCell(lx+2, ly+2, '^', fg, bg)
+			tb.SetCell(lx+3, ly+2, '^', fg, bg)
 		}
 		lx += 4
 	}
@@ -58,69 +58,90 @@ func updateAndDrawButtons(current *int, x, y int, mx, my int, n int, attrf attrF
 }
 
 var x, y = 10, 10
-var key termbox.Key = termbox.KeyArrowRight
+var key tb.Key = tb.KeyArrowRight
 
 func update_and_redraw_all(mx, my int) {
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	tb.Clear(tb.ColorDefault, tb.ColorDefault)
 	/*
 	if mx != -1 && my != -1 {
-		backbuf[bbw*my+mx] = termbox.Cell{Ch: runes[curRune], Fg: colors[curCol]}
+		backbuf[bbw*my+mx] = tb.Cell{Ch: runes[curRune], Fg: colors[curCol]}
 	}
-	copy(termbox.CellBuffer(), backbuf)
-	_, h := termbox.Size()
-	updateAndDrawButtons(&curRune, 0, 0, mx, my, len(runes), func(i int) (rune, termbox.Attribute, termbox.Attribute) {
-		return runes[i], termbox.ColorDefault, termbox.ColorDefault
+	copy(tb.CellBuffer(), backbuf)
+	_, h := tb.Size()
+	updateAndDrawButtons(&curRune, 0, 0, mx, my, len(runes), func(i int) (rune, tb.Attribute, tb.Attribute) {
+		return runes[i], tb.ColorDefault, tb.ColorDefault
 	})
-	updateAndDrawButtons(&curCol, 0, h-3, mx, my, len(colors), func(i int) (rune, termbox.Attribute, termbox.Attribute) {
-		return ' ', termbox.ColorDefault, colors[i]
+	updateAndDrawButtons(&curCol, 0, h-3, mx, my, len(colors), func(i int) (rune, tb.Attribute, tb.Attribute) {
+		return ' ', tb.ColorDefault, colors[i]
 	})
 	*/
-	if key == termbox.KeyArrowUp {
+	if key == tb.KeyArrowUp {
 		y--
-	} else if key == termbox.KeyArrowDown {
+	} else if key == tb.KeyArrowDown {
 		y++
-	} else if key == termbox.KeyArrowLeft {
+	} else if key == tb.KeyArrowLeft {
 		x--
-	} else if key == termbox.KeyArrowRight {
+	} else if key == tb.KeyArrowRight {
 		x++
 	}
 
-	termbox.SetCell(x, y, runes[4], colors[5], colors[7])
+	tb.SetCell(x, y, runes[4], colors[5], colors[7])
 
-	termbox.Flush()
+	tb.Flush()
 }
 
 func reallocBackBuffer(w, h int) {
 	bbw, bbh = w, h
-	backbuf = make([]termbox.Cell, w*h)
+	backbuf = make([]tb.Cell, w*h)
 }
+var ev tb.Event
+func listenEventOrTimeout() {
+	print("timeout START")
+	time.Sleep(time.Second * 2)
+	print("timeout FINISHED")
 
+	 tb.Interrupt()
+	print("tbInterrupt()")
+}
 func main() {
-	err := termbox.Init()
+	err := tb.Init()
 	if err != nil {
 		panic(err)
 	}
-	defer termbox.Close()
-	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
-	reallocBackBuffer(termbox.Size())
+	defer tb.Close()
+	tb.SetInputMode(tb.InputEsc | tb.InputMouse)
+	reallocBackBuffer(tb.Size())
 	update_and_redraw_all(-1, -1)
 
 mainloop:
-	for range time.Tick(time.Millisecond *500){
+	for {
 		mx, my := -1, -1
-		switch ev := termbox.PollEvent(); ev.Type {
-
-		case termbox.EventKey:
-			if ev.Key == termbox.KeyEsc {
+		print(0)
+		ev := tb.PollEvent()
+		print(1)
+		listenEventOrTimeout()
+		print(2)
+		switch ev.Type {
+		case tb.EventKey:
+			print("case EVENTKEY")
+			if ev.Key == tb.KeyEsc {
 				break mainloop
-			} else if ev.Key == termbox.KeyArrowUp || ev.Key == termbox.KeyArrowDown ||
-				ev.Key == termbox.KeyArrowRight || ev.Key == termbox.KeyArrowLeft {
+			} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
+				ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
 				key = ev.Key
 			}
-		case termbox.EventResize:
+		case tb.EventResize:
+			print("case EVENT RIsE")
 			reallocBackBuffer(ev.Width, ev.Height)
+		case tb.EventInterrupt:
+			print("case EVENT INTERRUPT")
+
+		default:
+			print("DEF")
+			tb.Interrupt()
 		}
 
+		print("under switch")
 		update_and_redraw_all(mx, my)
 	}
 }
