@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
+	"time"
 )
 
 var curCol = 0
@@ -80,10 +81,9 @@ func update_and_redraw_all(mx, my int) {
 		y++
 	} else if key == termbox.KeyArrowLeft {
 		x--
-	} else if key == termbox.KeyArrowRight{
+	} else if key == termbox.KeyArrowRight {
 		x++
 	}
-
 
 	termbox.SetCell(x, y, runes[4], colors[5], colors[7])
 
@@ -106,23 +106,21 @@ func main() {
 	update_and_redraw_all(-1, -1)
 
 mainloop:
-	for {
+	for range time.Tick(time.Millisecond *500){
 		mx, my := -1, -1
 		switch ev := termbox.PollEvent(); ev.Type {
 
 		case termbox.EventKey:
 			if ev.Key == termbox.KeyEsc {
 				break mainloop
-			} else if ev.Key == termbox.KeyArrowUp || ev.Key == termbox.KeyArrowDown || ev.Key == termbox.KeyArrowRight || ev.Key == termbox.KeyArrowLeft {
+			} else if ev.Key == termbox.KeyArrowUp || ev.Key == termbox.KeyArrowDown ||
+				ev.Key == termbox.KeyArrowRight || ev.Key == termbox.KeyArrowLeft {
 				key = ev.Key
-			}
-		case termbox.EventMouse:
-			if ev.Key == termbox.MouseLeft {
-				mx, my = ev.MouseX, ev.MouseY
 			}
 		case termbox.EventResize:
 			reallocBackBuffer(ev.Width, ev.Height)
 		}
+
 		update_and_redraw_all(mx, my)
 	}
 }
