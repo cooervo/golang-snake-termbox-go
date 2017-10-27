@@ -3,13 +3,12 @@ package main
 import (
 	tb "github.com/nsf/termbox-go"
 	"time"
+	"fmt"
 )
 
-var curCol = 0
-var curRune = 0
 var backbuf []tb.Cell
-var bbw, bbh int
 
+var corners = []rune{'O', '░', '▒', '▓', '█'}
 var runes = []rune{' ', '░', '▒', '▓', '█'}
 var colors = []tb.Attribute{
 	tb.ColorBlack,
@@ -22,75 +21,69 @@ var colors = []tb.Attribute{
 	tb.ColorWhite,
 }
 
-type attrFunc func(int) (rune, tb.Attribute, tb.Attribute)
-
-func updateAndDrawButtons(current *int, x, y int, mx, my int, n int, attrf attrFunc) {
-	/*
-	lx, ly := x, y
-	for i := 0; i < n; i++ {
-		if lx <= mx && mx <= lx+3 && ly <= my && my <= ly+1 {
-			*current = i
-		}
-		r, fg, bg := attrf(i)
-		tb.SetCell(lx+0, ly+0, r, fg, bg)
-		tb.SetCell(lx+1, ly+0, r, fg, bg)
-		tb.SetCell(lx+2, ly+0, r, fg, bg)
-		tb.SetCell(lx+3, ly+0, r, fg, bg)
-		tb.SetCell(lx+0, ly+1, r, fg, bg)
-		tb.SetCell(lx+1, ly+1, r, fg, bg)
-		tb.SetCell(lx+2, ly+1, r, fg, bg)
-		tb.SetCell(lx+3, ly+1, r, fg, bg)
-		lx += 4
-	}
-	lx, ly = x, y
-	for i := 0; i < n; i++ {
-		if *current == i {
-			fg := tb.ColorRed | tb.AttrBold
-			bg := tb.ColorDefault
-			tb.SetCell(lx+0, ly+2, '^', fg, bg)
-			tb.SetCell(lx+1, ly+2, '^', fg, bg)
-			tb.SetCell(lx+2, ly+2, '^', fg, bg)
-			tb.SetCell(lx+3, ly+2, '^', fg, bg)
-		}
-		lx += 4
-	}
-	*/
+type Pos struct {
+	x, y int
 }
+
+func (p Pos) String() string {
+	return fmt.Sprintf("%p", p)
+}
+
+var snake = []Pos{Pos{x, y}, Pos{x - 1, y}, Pos{x - 2, y}}
+
+type attrFunc func(int) (rune, tb.Attribute, tb.Attribute)
 
 var x, y = 10, 10
 var key tb.Key = tb.KeyArrowRight
+var initDraw = true
 
 func redraw(mx, my int) {
 	tb.Clear(tb.ColorDefault, tb.ColorDefault)
-	/*
-	if mx != -1 && my != -1 {
-		backbuf[bbw*my+mx] = tb.Cell{Ch: runes[curRune], Fg: colors[curCol]}
+
+	//===
+	var newHead Pos
+	if key == tb.KeyArrowUp {
+		newHead = Pos{x, y - 1}
+	} else if key == tb.KeyArrowRight {
+		newHead = Pos{x + 1, y}
 	}
-	copy(tb.CellBuffer(), backbuf)
-	_, h := tb.Size()
-	updateAndDrawButtons(&curRune, 0, 0, mx, my, len(runes), func(i int) (rune, tb.Attribute, tb.Attribute) {
-		return runes[i], tb.ColorDefault, tb.ColorDefault
-	})
-	updateAndDrawButtons(&curCol, 0, h-3, mx, my, len(colors), func(i int) (rune, tb.Attribute, tb.Attribute) {
-		return ' ', tb.ColorDefault, colors[i]
-	})
-	*/
+
+	// remove last element
+	snake = snake[:len(snake)-1]
+	var arr2 = []Pos{newHead}
+	snake = append(arr2, snake...)
+
+	//=== Change direction
 	if key == tb.KeyArrowUp {
 		y--
-	} else if key == tb.KeyArrowDown {
-		y++
-	} else if key == tb.KeyArrowLeft {
-		x--
 	} else if key == tb.KeyArrowRight {
 		x++
 	}
-	tb.SetCell(x, y, runes[4], colors[5], colors[7])
+
+	// DRAW SNAKE
+	for i, v := range snake {
+
+		// HEAD
+		if i == 0 {
+			tb.SetCell(v.x, v.y, runes[0], tb.ColorGreen, tb.ColorGreen)
+		}
+
+		// BODY
+		if i > 0 {
+			tb.SetCell(v.x, v.y, runes[0], tb.ColorBlue, tb.ColorBlue)
+		}
+
+	}
 
 	tb.Flush()
 }
 
+var width int
+var height int
+
 func reallocBackBuffer(w, h int) {
-	bbw, bbh = w, h
+	width = w
+	height = h
 	backbuf = make([]tb.Cell, w*h)
 }
 
@@ -99,7 +92,7 @@ func eventListener(chEvent chan<- tb.Event) {
 }
 
 func timeout(chTimeout chan<- string) {
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 1000)
 	chTimeout <- "timeout"
 }
 
@@ -109,11 +102,9 @@ func main() {
 		panic(err)
 	}
 	defer tb.Close()
-	tb.SetInputMode(tb.InputEsc | tb.InputMouse)
 	reallocBackBuffer(tb.Size())
-	redraw(-1, -1)
 
-mainloop:
+snakeLoop:
 	for {
 		mx, my := -1, -1
 
@@ -126,10 +117,14 @@ mainloop:
 		select {
 		case ev := <-chEvent:
 			if ev.Key == tb.KeyEsc {
-				break mainloop
+				break snakeLoop
+
 			} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
 				ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
 				key = ev.Key
+
+			} else if ev.Type == tb.EventResize {
+				reallocBackBuffer(ev.Width, ev.Height)
 			}
 
 			close(chEvent)
