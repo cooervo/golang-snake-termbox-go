@@ -4,6 +4,7 @@ import (
 	tb "github.com/nsf/termbox-go"
 	"time"
 	"fmt"
+	"math/rand"
 )
 
 var backbuf []tb.Cell
@@ -30,12 +31,18 @@ func (p Pos) String() string {
 }
 
 var snake = []Pos{Pos{x, y}, Pos{x - 1, y}, Pos{x - 2, y}}
+var applePos = Pos{5, 5}
 
 type attrFunc func(int) (rune, tb.Attribute, tb.Attribute)
 
 var x, y = 10, 10
 var key tb.Key = tb.KeyArrowRight
 var initDraw = true
+
+func random(min, max int) int {
+	rand.Seed(time.Now().Unix())
+	return rand.Intn(max-min) + min
+}
 
 func redraw(mx, my int) {
 	tb.Clear(tb.ColorDefault, tb.ColorDefault)
@@ -44,33 +51,60 @@ func redraw(mx, my int) {
 	var newHead Pos
 	if key == tb.KeyArrowUp {
 		newHead = Pos{x, y - 1}
+	} else if key == tb.KeyArrowDown {
+		newHead = Pos{x, y + 1}
 	} else if key == tb.KeyArrowRight {
 		newHead = Pos{x + 1, y}
+	} else if key == tb.KeyArrowLeft {
+		newHead = Pos{x - 1, y}
+	}
+
+	// === APPLe
+	tb.SetCell(applePos.x, applePos.y, '🍎', tb.ColorRed, tb.ColorBlack)
+
+	if newHead.x == applePos.x && newHead.y == applePos.y {
+		applePos = Pos{random(0, 20), random(0, 20)}
+
+		var newTail Pos
+		if key == tb.KeyArrowUp {
+			newTail = Pos{x, y - 1}
+		} else if key == tb.KeyArrowDown {
+			newTail = Pos{x, y + 1}
+		} else if key == tb.KeyArrowRight {
+			newTail = Pos{x + 1, y}
+		} else if key == tb.KeyArrowLeft {
+			newTail = Pos{x - 1, y}
+		}
+
+		snake = append(snake, newTail)
 	}
 
 	// remove last element
 	snake = snake[:len(snake)-1]
-	var arr2 = []Pos{newHead}
-	snake = append(arr2, snake...)
+	// create new slice with newHead as first element
+	snake = append([]Pos{newHead}, snake...)
 
 	//=== Change direction
 	if key == tb.KeyArrowUp {
 		y--
+	} else if key == tb.KeyArrowDown {
+		y++
 	} else if key == tb.KeyArrowRight {
 		x++
+	} else if key == tb.KeyArrowLeft {
+		x--
 	}
 
 	// DRAW SNAKE
 	for i, v := range snake {
-
 		// HEAD
 		if i == 0 {
-			tb.SetCell(v.x, v.y, runes[0], tb.ColorGreen, tb.ColorGreen)
+			tb.SetCell(v.x, v.y, '▣', tb.ColorGreen, tb.ColorBlack)
 		}
 
 		// BODY
 		if i > 0 {
-			tb.SetCell(v.x, v.y, runes[0], tb.ColorBlue, tb.ColorBlue)
+			tb.SetCell(v.x, v.y, '▣', tb.ColorGreen, tb.ColorBlack)
 		}
 
 	}
@@ -92,7 +126,7 @@ func eventListener(chEvent chan<- tb.Event) {
 }
 
 func timeout(chTimeout chan<- string) {
-	time.Sleep(time.Millisecond * 1000)
+	time.Sleep(time.Millisecond * 300)
 	chTimeout <- "timeout"
 }
 
