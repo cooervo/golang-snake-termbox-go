@@ -60,7 +60,7 @@ func updateAndDrawButtons(current *int, x, y int, mx, my int, n int, attrf attrF
 var x, y = 10, 10
 var key tb.Key = tb.KeyArrowRight
 
-func update_and_redraw_all(mx, my int) {
+func redraw(mx, my int) {
 	tb.Clear(tb.ColorDefault, tb.ColorDefault)
 	/*
 	if mx != -1 && my != -1 {
@@ -84,7 +84,6 @@ func update_and_redraw_all(mx, my int) {
 	} else if key == tb.KeyArrowRight {
 		x++
 	}
-
 	tb.SetCell(x, y, runes[4], colors[5], colors[7])
 
 	tb.Flush()
@@ -94,15 +93,16 @@ func reallocBackBuffer(w, h int) {
 	bbw, bbh = w, h
 	backbuf = make([]tb.Cell, w*h)
 }
-var ev tb.Event
-func listenEventOrTimeout() {
-	print("timeout START")
-	time.Sleep(time.Second * 2)
-	print("timeout FINISHED")
 
-	 tb.Interrupt()
-	print("tbInterrupt()")
+func eventListener(chEvent chan<- tb.Event) {
+	chEvent <- tb.PollEvent()
 }
+
+func timeout(chTimeout chan<- string) {
+	time.Sleep(time.Second * 1)
+	chTimeout <- "timeout"
+}
+
 func main() {
 	err := tb.Init()
 	if err != nil {
@@ -111,37 +111,43 @@ func main() {
 	defer tb.Close()
 	tb.SetInputMode(tb.InputEsc | tb.InputMouse)
 	reallocBackBuffer(tb.Size())
-	update_and_redraw_all(-1, -1)
+	redraw(-1, -1)
 
 mainloop:
-	for {
+	for range time.Tick(time.Microsecond * 500) {
 		mx, my := -1, -1
-		print(0)
-		ev := tb.PollEvent()
-		print(1)
-		listenEventOrTimeout()
-		print(2)
-		switch ev.Type {
-		case tb.EventKey:
-			print("case EVENTKEY")
-			if ev.Key == tb.KeyEsc {
-				break mainloop
-			} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
-				ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
-				key = ev.Key
-			}
-		case tb.EventResize:
-			print("case EVENT RIsE")
-			reallocBackBuffer(ev.Width, ev.Height)
-		case tb.EventInterrupt:
-			print("case EVENT INTERRUPT")
 
-		default:
-			print("DEF")
-			tb.Interrupt()
+		var chTimeout = make(chan string)
+		var chEvent = make(chan tb.Event)
+
+		go timeout(chTimeout)
+		go eventListener(chEvent)
+		print(" SEL")
+
+		select {
+		case ev := <-chEvent:
+			print(" SWI ")
+			switch ev.Type {
+			case tb.EventKey:
+				if ev.Key == tb.KeyEsc {
+					break mainloop
+				} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
+					ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
+					key = ev.Key
+				}
+			case tb.EventResize:
+				reallocBackBuffer(ev.Width, ev.Height)
+			default:
+				tb.Interrupt()
+			}
+
+			close(chEvent)
+		case <-chTimeout:
+			//print(" INTERRUPT ")
+			//tb.Interrupt()
+			close(chTimeout)
 		}
 
-		print("under switch")
-		update_and_redraw_all(mx, my)
+		redraw(mx, my)
 	}
 }
