@@ -99,7 +99,7 @@ func eventListener(chEvent chan<- tb.Event) {
 }
 
 func timeout(chTimeout chan<- string) {
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Millisecond * 500)
 	chTimeout <- "timeout"
 }
 
@@ -114,7 +114,7 @@ func main() {
 	redraw(-1, -1)
 
 mainloop:
-	for range time.Tick(time.Microsecond * 500) {
+	for {
 		mx, my := -1, -1
 
 		var chTimeout = make(chan string)
@@ -122,29 +122,18 @@ mainloop:
 
 		go timeout(chTimeout)
 		go eventListener(chEvent)
-		print(" SEL")
 
 		select {
 		case ev := <-chEvent:
-			print(" SWI ")
-			switch ev.Type {
-			case tb.EventKey:
-				if ev.Key == tb.KeyEsc {
-					break mainloop
-				} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
-					ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
-					key = ev.Key
-				}
-			case tb.EventResize:
-				reallocBackBuffer(ev.Width, ev.Height)
-			default:
-				tb.Interrupt()
+			if ev.Key == tb.KeyEsc {
+				break mainloop
+			} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
+				ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
+				key = ev.Key
 			}
 
 			close(chEvent)
 		case <-chTimeout:
-			//print(" INTERRUPT ")
-			//tb.Interrupt()
 			close(chTimeout)
 		}
 
