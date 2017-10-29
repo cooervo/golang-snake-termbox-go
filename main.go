@@ -126,7 +126,7 @@ func eventListener(chEvent chan<- tb.Event) {
 }
 
 func timeout(chTimeout chan<- string) {
-	time.Sleep(time.Millisecond * 300)
+	time.Sleep(time.Millisecond * 200)
 	chTimeout <- "timeout"
 }
 
