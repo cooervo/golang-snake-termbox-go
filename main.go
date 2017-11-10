@@ -9,19 +9,6 @@ import (
 
 var backbuf []tb.Cell
 
-var corners = []rune{'O', '░', '▒', '▓', '█'}
-var runes = []rune{' ', '░', '▒', '▓', '█'}
-var colors = []tb.Attribute{
-	tb.ColorBlack,
-	tb.ColorRed,
-	tb.ColorGreen,
-	tb.ColorYellow,
-	tb.ColorBlue,
-	tb.ColorMagenta,
-	tb.ColorCyan,
-	tb.ColorWhite,
-}
-
 type Pos struct {
 	x, y int
 }
@@ -35,35 +22,29 @@ var applePos = Pos{5, 5}
 
 type attrFunc func(int) (rune, tb.Attribute, tb.Attribute)
 
-var x, y = 10, 10
 var key tb.Key = tb.KeyArrowRight
-var initDraw = true
 
 func random(min, max int) int {
 	rand.Seed(time.Now().Unix())
 	return rand.Intn(max-min) + min
 }
 
+var x, y = 10, 10
+
 func redraw(mx, my int) {
 	tb.Clear(tb.ColorDefault, tb.ColorDefault)
+	head := newHeadDirection()
+	appleHandler(head)
+	advanceSnake(head)
+	changeDirection()
+	drawSnake()
+	tb.Flush()
+}
 
-	//===
-	var newHead Pos
-	if key == tb.KeyArrowUp {
-		newHead = Pos{x, y - 1}
-	} else if key == tb.KeyArrowDown {
-		newHead = Pos{x, y + 1}
-	} else if key == tb.KeyArrowRight {
-		newHead = Pos{x + 1, y}
-	} else if key == tb.KeyArrowLeft {
-		newHead = Pos{x - 1, y}
-	}
-
-	// === APPLe
-	tb.SetCell(applePos.x, applePos.y, '🍎', tb.ColorRed, tb.ColorBlack)
-
-	if newHead.x == applePos.x && newHead.y == applePos.y {
-		applePos = Pos{random(0, 20), random(0, 20)}
+func appleHandler(head Pos) {
+	tb.SetCell(applePos.x, applePos.y, 'o', tb.ColorRed, tb.ColorBlack)
+	if head.x == applePos.x && head.y == applePos.y {
+		applePos = Pos{random(1, 20), random(1, 20)}
 
 		var newTail Pos
 		if key == tb.KeyArrowUp {
@@ -78,13 +59,27 @@ func redraw(mx, my int) {
 
 		snake = append(snake, newTail)
 	}
+}
 
-	// remove last element
+func newHeadDirection() Pos {
+	var newHead Pos
+	if key == tb.KeyArrowUp {
+		newHead = Pos{x, y - 1}
+	} else if key == tb.KeyArrowDown {
+		newHead = Pos{x, y + 1}
+	} else if key == tb.KeyArrowRight {
+		newHead = Pos{x + 1, y}
+	} else if key == tb.KeyArrowLeft {
+		newHead = Pos{x - 1, y}
+	}
+	return newHead
+}
+
+func advanceSnake(newHead Pos) {
 	snake = snake[:len(snake)-1]
-	// create new slice with newHead as first element
 	snake = append([]Pos{newHead}, snake...)
-
-	//=== Change direction
+}
+func changeDirection() {
 	if key == tb.KeyArrowUp {
 		y--
 	} else if key == tb.KeyArrowDown {
@@ -94,22 +89,20 @@ func redraw(mx, my int) {
 	} else if key == tb.KeyArrowLeft {
 		x--
 	}
+}
 
-	// DRAW SNAKE
+func drawSnake() {
 	for i, v := range snake {
 		// HEAD
 		if i == 0 {
-			tb.SetCell(v.x, v.y, '▣', tb.ColorGreen, tb.ColorBlack)
+			tb.SetCell(v.x, v.y, 'O', tb.ColorGreen, tb.ColorBlack)
 		}
 
 		// BODY
 		if i > 0 {
-			tb.SetCell(v.x, v.y, '▣', tb.ColorGreen, tb.ColorBlack)
+			tb.SetCell(v.x, v.y, 'O', tb.ColorGreen, tb.ColorBlack)
 		}
-
 	}
-
-	tb.Flush()
 }
 
 var width int
@@ -137,8 +130,10 @@ func main() {
 	}
 	defer tb.Close()
 	reallocBackBuffer(tb.Size())
+	gameLoop()
+}
 
-snakeLoop:
+func gameLoop() {
 	for {
 		mx, my := -1, -1
 
@@ -150,13 +145,16 @@ snakeLoop:
 
 		select {
 		case ev := <-chEvent:
+			// if esc cancel game
 			if ev.Key == tb.KeyEsc {
-				break snakeLoop
+				return
 
+				// if is arrow key
 			} else if ev.Key == tb.KeyArrowUp || ev.Key == tb.KeyArrowDown ||
 				ev.Key == tb.KeyArrowRight || ev.Key == tb.KeyArrowLeft {
 				key = ev.Key
 
+				// if is window resize
 			} else if ev.Type == tb.EventResize {
 				reallocBackBuffer(ev.Width, ev.Height)
 			}
