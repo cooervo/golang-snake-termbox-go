@@ -31,7 +31,7 @@ func random(min, max int) int {
 
 var x, y = 10, 10
 
-func redraw(mx, my int) {
+func redraw() {
 	tb.Clear(tb.ColorDefault, tb.ColorDefault)
 	head := newHeadDirection()
 	appleHandler(head)
@@ -105,12 +105,7 @@ func drawSnake() {
 	}
 }
 
-var width int
-var height int
-
 func reallocBackBuffer(w, h int) {
-	width = w
-	height = h
 	backbuf = make([]tb.Cell, w*h)
 }
 
@@ -129,14 +124,13 @@ func main() {
 		panic(err)
 	}
 	defer tb.Close()
+
 	reallocBackBuffer(tb.Size())
 	gameLoop()
 }
 
 func gameLoop() {
 	for {
-		mx, my := -1, -1
-
 		var chTimeout = make(chan string)
 		var chEvent = make(chan tb.Event)
 
@@ -164,6 +158,6 @@ func gameLoop() {
 			close(chTimeout)
 		}
 
-		redraw(mx, my)
+		redraw()
 	}
 }
